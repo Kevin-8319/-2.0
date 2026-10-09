@@ -1,0 +1,1094 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f4f5f7">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="健身记录">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<title>健身记录</title>
+<style>
+  :root{
+    --bg:#f4f5f7; --card:#ffffff; --card2:#ffffff; --line:#e6e8ec;
+    --text:#1f2329; --sub:#8b919c; --accent:#ff6b35; --green:#22b573; --red:#ff4d4f;
+    --sh-sm:0 1px 2px rgba(31,35,41,.05), 0 2px 6px rgba(31,35,41,.04);
+    --sh-md:0 4px 14px rgba(31,35,41,.08);
+    --sh-lg:0 14px 34px rgba(31,35,41,.16);
+    --grad-card:linear-gradient(180deg,#ffffff,#f8f9fb);
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    display:flex;flex-direction:column;
+    height:100dvh;overflow:hidden;
+    -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+  }
+  ::-webkit-scrollbar{width:6px;height:6px;}
+  ::-webkit-scrollbar-thumb{background:rgba(31,35,41,.18);border-radius:3px;}
+  .hidden{display:none !important;}
+  @keyframes fadeUp{
+    from{opacity:0;transform:translateY(10px);}
+    to{opacity:1;transform:translateY(0);}
+  }
+  .view{animation:fadeUp .3s cubic-bezier(.22,.9,.32,1);}
+
+  /* 顶栏 */
+  .topbar{
+    position:relative;flex:none;z-index:10;display:flex;align-items:center;gap:4px;
+    padding:calc(10px + env(safe-area-inset-top)) 16px 10px;
+    background:rgba(244,245,247,.95);backdrop-filter:blur(12px);
+    border-bottom:1px solid var(--line);
+    box-shadow:0 1px 8px rgba(31,35,41,.05);
+  }
+  .topbar h1{font-size:17px;font-weight:600;flex:1;text-align:center;margin-right:36px;}
+  .back{
+    width:36px;height:36px;flex:none;background:var(--card);border:1px solid var(--line);
+    color:var(--text);border-radius:10px;font-size:20px;line-height:1;cursor:pointer;
+  }
+
+  main{
+    flex:1;min-height:0;width:100%;max-width:560px;margin:0 auto;
+    display:flex;flex-direction:column;overflow:hidden;
+  }
+  .view{flex:1;min-height:0;display:flex;flex-direction:column;}
+  .view.scroll{overflow-y:auto;-webkit-overflow-scrolling:touch;scroll-behavior:smooth;overscroll-behavior:contain;}
+  #view-group,#view-record,#view-history,#view-pr,#view-stats{padding:16px;}
+
+  /* 肌肉群网格 */
+  #view-train{padding:12px;}
+  .grid{
+    flex:1;min-height:0;display:grid;
+    grid-template-columns:1fr 1fr;grid-template-rows:repeat(3,1fr);gap:12px;
+  }
+  .gcard{
+    border:1px solid rgba(255,255,255,.30);border-radius:18px;
+    cursor:pointer;transition:transform .15s cubic-bezier(.22,.9,.32,1), box-shadow .15s;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
+    box-shadow:0 8px 20px rgba(31,35,41,.18), inset 0 1px 0 rgba(255,255,255,.28);
+  }
+  .gcard:active{transform:scale(.96);box-shadow:0 2px 6px rgba(31,35,41,.22), inset 0 1px 0 rgba(255,255,255,.28);}
+  .gcard .gname{font-size:42px;font-weight:800;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.22);}
+  .hint{color:var(--sub);font-size:12px;text-align:center;margin-top:16px;}
+
+  /* 动作列表 */
+  .exrow{
+    display:flex;align-items:center;gap:8px;background:var(--grad-card);
+    border:1px solid var(--line);border-left:3px solid var(--gcolor,var(--line));
+    border-radius:14px;padding:12px;margin-bottom:10px;
+    box-shadow:var(--sh-sm);transition:transform .12s;
+  }
+  .exrow:active{transform:scale(.99);}
+  .exrow .info{flex:1;min-width:0;}
+  .exrow .ename{font-size:15px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .exrow .emeta{color:var(--sub);font-size:12px;margin-top:3px;}
+  .exrow .start{
+    flex:none;background:transparent;border:1px solid var(--gcolor,var(--accent));color:var(--gcolor,var(--accent));
+    padding:7px 12px;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;
+    transition:transform .12s;
+  }
+  .exrow .start:active{transform:scale(.94);}
+  .exrow .del{
+    flex:none;width:26px;height:26px;background:transparent;border:none;color:var(--sub);
+    font-size:15px;cursor:pointer;border-radius:6px;
+  }
+  .addrow{display:flex;gap:8px;margin-top:14px;}
+  .addrow input{
+    flex:1;background:var(--card2);border:1px solid var(--line);color:var(--text);
+    border-radius:10px;padding:10px 12px;font-size:14px;outline:none;
+    box-shadow:inset 0 1px 2px rgba(31,35,41,.04);
+    transition:border-color .15s, box-shadow .15s;
+  }
+  .addrow input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(255,107,53,.12), inset 0 1px 2px rgba(31,35,41,.04);}
+  button{font-family:inherit;}
+
+  /* 记录页 */
+  .record-head{
+    background:var(--grad-card);border:1px solid var(--line);border-radius:16px;
+    padding:14px;margin-bottom:12px;box-shadow:var(--sh-sm);
+  }
+  .rec-name{font-size:18px;font-weight:700;}
+  .rec-date{color:var(--sub);font-size:12px;margin-top:4px;}
+  .setrow{
+    display:flex;align-items:center;gap:10px;background:var(--grad-card);
+    border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:8px;
+    box-shadow:var(--sh-sm);
+  }
+  .setrow .idx{
+    color:var(--sub);font-size:12px;flex:none;width:24px;height:24px;
+    background:rgba(31,35,41,.06);border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .setrow .w{font-size:15px;font-weight:700;flex:none;}
+  .setrow .x{color:var(--sub);font-size:13px;flex:none;}
+  .setrow .r{font-size:15px;font-weight:700;flex:none;}
+  .setrow .spacer{flex:1;}
+  .setrow .rm{flex:none;width:26px;height:26px;background:transparent;border:none;color:var(--sub);font-size:15px;cursor:pointer;}
+  .set-input{display:flex;gap:8px;margin-top:14px;}
+  .input-wrap{position:relative;flex:1;display:flex;align-items:center;min-width:0;}
+  .input-wrap input{
+    width:100%;background:var(--card2);border:1px solid var(--line);color:var(--text);
+    border-radius:10px;padding:10px 40px 10px 12px;font-size:15px;outline:none;min-width:0;
+    box-shadow:inset 0 1px 2px rgba(31,35,41,.04);
+    transition:border-color .15s, box-shadow .15s;
+  }
+  .input-wrap input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(255,107,53,.12), inset 0 1px 2px rgba(31,35,41,.04);}
+  .unit-suffix{
+    position:absolute;right:12px;color:var(--sub);font-size:13px;
+    pointer-events:none;opacity:0;transition:opacity .15s;
+  }
+  .rec-actions{display:flex;gap:10px;margin-top:16px;}
+  .ghost{
+    flex:1;background:transparent;border:1px solid var(--line);color:var(--sub);
+    padding:12px;border-radius:10px;font-size:15px;cursor:pointer;
+  }
+  .primary{
+    flex:1;border:none;color:#fff;
+    background:linear-gradient(180deg,rgba(255,255,255,.18),rgba(0,0,0,.10)),var(--gcolor,var(--accent));
+    padding:12px;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;
+    box-shadow:0 6px 16px rgba(0,0,0,.18);
+    transition:transform .12s, box-shadow .12s;
+  }
+  .primary:active{transform:scale(.97);box-shadow:0 2px 6px rgba(0,0,0,.2);}
+  .addset-btn{
+    background:linear-gradient(180deg,rgba(255,255,255,.18),rgba(0,0,0,.10)),var(--gcolor,var(--accent));
+    border:none;color:#fff;padding:10px 14px;
+    border-radius:11px;font-size:14px;font-weight:600;cursor:pointer;flex:none;
+    box-shadow:0 4px 10px rgba(0,0,0,.15);
+    transition:transform .12s, box-shadow .12s;
+  }
+  .addset-btn:active{transform:scale(.94);box-shadow:0 1px 4px rgba(0,0,0,.2);}
+
+  /* 历史 */
+  .chips{display:flex;gap:8px;overflow-x:auto;padding:2px 0 12px;scrollbar-width:none;}
+  .chips::-webkit-scrollbar{display:none;}
+  .chip{
+    flex:none;background:var(--card);border:1px solid var(--line);color:var(--sub);
+    padding:6px 14px;border-radius:999px;font-size:13px;cursor:pointer;
+    transition:all .2s;
+  }
+  .chip.active{background:linear-gradient(180deg,rgba(255,255,255,.15),rgba(0,0,0,.06)),var(--accent);border-color:var(--accent);color:#fff;font-weight:600;box-shadow:0 4px 10px rgba(255,107,53,.3);}
+  .daycard{
+    background:var(--grad-card);border:1px solid var(--line);border-radius:16px;
+    margin-bottom:14px;overflow:hidden;
+    box-shadow:var(--sh-md);
+    animation:fadeUp .35s cubic-bezier(.22,.9,.32,1) both;
+  }
+  .day-head{
+    display:flex;align-items:center;gap:8px;
+    padding:12px 14px;border-bottom:1px solid var(--line);
+    background:linear-gradient(180deg,rgba(31,35,41,.035),rgba(31,35,41,.005));
+  }
+  .day-date{font-size:15px;font-weight:800;}
+  .day-rel{
+    background:var(--accent);color:#fff;font-size:11px;font-weight:700;
+    padding:2px 8px;border-radius:999px;
+  }
+  .day-week{color:var(--sub);font-size:12px;}
+  .day-count{margin-left:auto;color:var(--sub);font-size:12px;}
+  .hisrow{
+    display:flex;align-items:center;gap:10px;
+    padding:12px 14px;border-bottom:1px solid var(--line);
+  }
+  .hisrow:last-child{border-bottom:none;}
+  .hisrow .grouptag{flex:none;font-size:12px;font-weight:700;padding:3px 8px;border-radius:6px;}
+  .hisrow .hname{flex:0 1 auto;min-width:0;max-width:45%;font-size:15px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .hisrow .hno{flex:none;font-size:11px;font-weight:700;color:var(--sub);background:rgba(31,35,41,.06);padding:2px 7px;border-radius:999px;}
+  .hisrow .hsets{flex:none;font-size:14px;font-weight:700;color:var(--accent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:45%;}
+  .hisrow .spacer{flex:1;}
+  .hisrow .htime{flex:none;color:var(--sub);font-size:12px;}
+  .hisrow .hm{flex:none;width:26px;height:26px;background:transparent;border:none;color:var(--sub);font-size:15px;cursor:pointer;}
+  .empty{color:var(--sub);text-align:center;margin-top:60px;font-size:14px;}
+
+  /* 统计 */
+  .exselect{
+    width:100%;background:var(--card2);border:1px solid var(--line);color:var(--text);
+    padding:11px 36px 11px 12px;border-radius:12px;font-size:15px;outline:none;margin-bottom:12px;
+    appearance:none;-webkit-appearance:none;
+    background-image:url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%238b919c' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:right 12px center;
+    transition:border-color .2s, box-shadow .2s;
+  }
+  .exselect:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(255,107,53,.12);}
+  .statcards{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:2px;}
+  .statcard{
+    background:var(--grad-card);border:1px solid var(--line);border-radius:14px;
+    padding:12px 4px;text-align:center;box-shadow:var(--sh-sm);
+  }
+  .statval{font-size:20px;font-weight:800;color:var(--text);font-variant-numeric:tabular-nums;}
+  .statval .unit{font-size:10px;font-weight:600;color:var(--sub);margin-left:1px;}
+  .statlabel{font-size:11px;color:var(--sub);margin-top:3px;}
+  .chart-title{font-size:14px;font-weight:700;margin:16px 0 8px;display:flex;align-items:center;gap:6px;}
+  .chart-wrap{
+    background:var(--grad-card);border:1px solid var(--line);border-radius:16px;padding:10px 8px 6px;
+    box-shadow:var(--sh-sm);
+  }
+  #chart{width:100%;height:220px;display:block;}
+  .sec-title{font-size:15px;font-weight:700;margin:20px 0 10px;}
+  #view-pr .sec-title{margin-top:0;}
+  .prrow{
+    display:flex;align-items:center;gap:10px;background:var(--grad-card);
+    border:1px solid var(--line);border-radius:14px;padding:11px 12px;margin-bottom:8px;
+    box-shadow:var(--sh-sm);
+    animation:fadeUp .45s cubic-bezier(.22,.9,.32,1) both;
+    transition:transform .15s;
+  }
+  .prrow:active{transform:scale(.98);}
+  .prrow .grouptag{flex:none;font-size:12px;font-weight:700;padding:3px 8px;border-radius:6px;}
+  .prrow .pname{flex:1;font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .prrow .pbest{flex:none;font-size:15px;font-weight:700;color:var(--accent);}
+  .prrow .preps{color:var(--sub);font-size:12px;font-weight:600;margin-left:1px;}
+  .prrow .pdate{flex:none;color:var(--sub);font-size:11px;}
+  .data-btns{display:flex;gap:10px;margin-top:20px;}
+  .danger{
+    width:100%;background:transparent;border:1px solid var(--red);color:var(--red);
+    padding:12px;border-radius:10px;font-size:14px;cursor:pointer;margin-top:10px;
+  }
+
+  /* 底部导航 */
+  .tabbar{
+    flex:none;z-index:10;display:flex;
+    background:rgba(255,255,255,.95);backdrop-filter:blur(12px);
+    border-top:1px solid var(--line);
+    box-shadow:0 -1px 8px rgba(31,35,41,.05);
+    padding-bottom:env(safe-area-inset-bottom);
+  }
+  .tab{
+    flex:1;background:transparent;border:none;color:var(--sub);
+    padding:12px 0 10px;font-size:13px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;
+  }
+  .tab .ticon{font-size:19px;transition:transform .2s;}
+  .tab{transition:color .2s;}
+  .tab.active{color:var(--accent);font-weight:700;}
+  .tab.active .ticon{transform:translateY(-1px) scale(1.12);filter:drop-shadow(0 2px 5px rgba(255,107,53,.5));}
+
+  /* toast */
+  #toast{
+    position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom));transform:translateX(-50%);
+    background:rgba(43,50,64,.92);backdrop-filter:blur(6px);color:#fff;padding:9px 18px;border-radius:999px;font-size:13px;
+    box-shadow:0 6px 20px rgba(0,0,0,.3);
+    opacity:0;pointer-events:none;transition:opacity .25s;z-index:99;white-space:nowrap;
+  }
+  #toast.show{opacity:1;}
+
+  /* 确认弹窗 */
+  .modal{
+    position:fixed;inset:0;z-index:99;
+    background:rgba(15,17,21,.45);
+    display:flex;align-items:center;justify-content:center;
+    padding:24px;
+    animation:mdFade .18s ease;
+  }
+  @keyframes mdFade{from{opacity:0;}to{opacity:1;}}
+  .modal-card{
+    background:var(--card);border-radius:20px;padding:20px;
+    width:100%;max-width:300px;text-align:center;
+    box-shadow:var(--sh-lg);
+    animation:mdPop .22s cubic-bezier(.22,.9,.32,1);
+  }
+  @keyframes mdPop{from{opacity:0;transform:scale(.92);}to{opacity:1;transform:scale(1);}}
+  .modal-title{font-size:16px;font-weight:800;margin-bottom:8px;}
+  .modal-msg{color:var(--sub);font-size:14px;line-height:1.5;margin-bottom:18px;word-break:break-all;}
+  .modal-btns{display:flex;gap:10px;}
+  .modal-cancel,.modal-ok{flex:1;padding:11px;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;transition:transform .12s;}
+  .modal-cancel:active,.modal-ok:active{transform:scale(.96);}
+  .modal-cancel{background:transparent;border:1px solid var(--line);color:var(--sub);}
+  .modal-ok{background:linear-gradient(180deg,#ff6b6b,#f03e3e);border:none;color:#fff;box-shadow:0 6px 14px rgba(240,62,62,.35);}
+
+  /* 深浅色切换按钮 */
+  .themebtn{
+    position:absolute;right:12px;top:50%;transform:translateY(-50%);
+    width:34px;height:34px;background:transparent;border:none;
+    font-size:17px;cursor:pointer;border-radius:10px;line-height:1;
+  }
+  .themebtn:active{transform:translateY(-50%) scale(.9);}
+
+  /* 深色模式 */
+  body.dark{
+    --bg:#0e1013; --card:#171a20; --card2:#1e222a; --line:#262b35;
+    --text:#eef1f5; --sub:#8b93a1;
+    --sh-sm:0 1px 2px rgba(0,0,0,.35), 0 2px 6px rgba(0,0,0,.3);
+    --sh-md:0 4px 14px rgba(0,0,0,.45);
+    --sh-lg:0 14px 34px rgba(0,0,0,.6);
+    --grad-card:linear-gradient(180deg,#1c2027,#171a20);
+  }
+  body.dark .topbar{background:rgba(14,16,19,.92);box-shadow:0 1px 8px rgba(0,0,0,.35);}
+  body.dark .tabbar{background:rgba(18,21,27,.95);box-shadow:0 -1px 8px rgba(0,0,0,.35);}
+  body.dark .day-head{background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.01));}
+  body.dark .hno{background:rgba(255,255,255,.08);}
+  body.dark .setrow .idx{background:rgba(255,255,255,.08);}
+  body.dark .input-wrap input, body.dark .addrow input{box-shadow:inset 0 1px 2px rgba(0,0,0,.3);}
+  body.dark .gcard{box-shadow:0 8px 20px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.12);}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <button class="back hidden" id="backBtn">‹</button>
+  <h1 id="pageTitle">健身记录</h1>
+  <button class="themebtn" id="themeBtn">🌙</button>
+</header>
+
+<main>
+  <!-- 训练：肌肉群 -->
+  <section id="view-train" class="view">
+    <div class="grid" id="groupGrid"></div>
+  </section>
+
+  <!-- 训练：动作列表 -->
+  <section id="view-group" class="view scroll hidden">
+    <div id="exList"></div>
+    <div class="addrow">
+      <input id="newExName" placeholder="添加新动作，如：哑铃飞鸟" maxlength="20">
+      <button class="addset-btn" id="addExBtn">添加</button>
+    </div>
+    <p class="hint">点击 ✕ 可删除动作（历史记录会保留）</p>
+  </section>
+
+  <!-- 训练：记录组 -->
+  <section id="view-record" class="view scroll hidden">
+    <div class="record-head">
+      <div class="rec-name" id="recExName"></div>
+      <div class="rec-date" id="recDate"></div>
+    </div>
+    <div id="setList"></div>
+    <div class="set-input">
+      <div class="input-wrap">
+        <input id="wInput" type="text" inputmode="decimal" placeholder="重量" maxlength="7" autocomplete="off">
+        <span class="unit-suffix" id="wUnit">kg</span>
+      </div>
+      <div class="input-wrap">
+        <input id="rInput" type="text" inputmode="numeric" placeholder="次数" maxlength="3" autocomplete="off">
+        <span class="unit-suffix" id="rUnit">次</span>
+      </div>
+      <button class="addset-btn" id="addSetBtn">加组</button>
+    </div>
+    <div class="rec-actions">
+      <button class="ghost" id="cancelBtn">取消</button>
+      <button class="primary" id="saveBtn">完成训练</button>
+    </div>
+  </section>
+
+  <!-- 历史 -->
+  <section id="view-history" class="view scroll hidden">
+    <div class="chips" id="filterChips"></div>
+    <div id="historyList"></div>
+  </section>
+
+  <!-- PR 榜 -->
+  <section id="view-pr" class="view scroll hidden">
+    <div class="sec-title">🏆 个人纪录 PR</div>
+    <div id="prList"></div>
+  </section>
+
+  <!-- 统计 -->
+  <section id="view-stats" class="view scroll hidden">
+    <select class="exselect" id="exSelect"></select>
+    <div class="statcards">
+      <div class="statcard"><div class="statval"><span id="stBest">0</span><span class="unit">kg</span></div><div class="statlabel">最佳重量</div></div>
+      <div class="statcard"><div class="statval"><span id="stReps">0</span><span class="unit">次</span></div><div class="statlabel">次数</div></div>
+    </div>
+    <div class="chart-title">📈 每日最大重量趋势</div>
+    <div class="chart-wrap"><canvas id="chart"></canvas></div>
+    <div class="data-btns">
+      <button class="ghost" id="exportBtn">导出数据</button>
+      <button class="ghost" id="importBtn">导入数据</button>
+      <input type="file" id="importFile" accept=".json,application/json" class="hidden">
+    </div>
+    <button class="danger" id="clearBtn">清空全部数据</button>
+  </section>
+</main>
+
+<nav class="tabbar">
+  <button class="tab active" data-tab="train"><span class="ticon">🏋️</span>训练</button>
+  <button class="tab" data-tab="history"><span class="ticon">📋</span>历史</button>
+  <button class="tab" data-tab="pr"><span class="ticon">🏆</span>PR</button>
+  <button class="tab" data-tab="stats"><span class="ticon">📈</span>统计</button>
+</nav>
+
+<div class="modal hidden" id="confirmModal">
+  <div class="modal-card">
+    <div class="modal-title">删除确认</div>
+    <div class="modal-msg" id="modalMsg"></div>
+    <div class="modal-btns">
+      <button class="modal-cancel" id="modalCancel">取消</button>
+      <button class="modal-ok" id="modalOk">删除</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+(function(){
+"use strict";
+var KEY = "gymlog_v1";
+var GROUPS = ["胸","背","腿","肩","腹肌","手臂"];
+var GROUP_COLORS = {胸:"#ff4d4f",背:"#4f8cff",腿:"#46c93a",肩:"#ffa940",腹肌:"#b37feb",手臂:"#36cfc9"};
+var DEFAULT_EX = {
+  胸:["上斜哑铃推胸","杠铃卧推","器械卧推","双杠臂屈伸","绳索夹胸"],
+  背:["引体向上","杠铃划船","高位下拉","坐姿划船","单臂哑铃划船"],
+  腿:["杠铃深蹲","腿举","罗马尼亚硬拉","腿屈伸","站姿提踵"],
+  肩:["坐姿哑铃推举","哑铃侧平举","面拉","俯身飞鸟"],
+  腹肌:["卷腹","悬垂举腿","绳索卷腹","平板支撑"],
+  手臂:["杠铃弯举","哑铃锤式弯举","绳索下压","仰卧臂屈伸"]
+};
+
+var state = { exercises:null, records:[] };
+var curGroup = null, curExercise = null, curSets = [];
+var historyFilter = "全部";
+var statEx = null;
+
+function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];}); }
+
+function load(){
+  try{
+    var raw = localStorage.getItem(KEY);
+    if(raw){
+      var d = JSON.parse(raw);
+      if(d && d.exercises && Array.isArray(d.records)){
+        state.exercises = d.exercises;
+        state.records = d.records;
+        return;
+      }
+    }
+  }catch(e){}
+  state.exercises = JSON.parse(JSON.stringify(DEFAULT_EX));
+  state.records = [];
+}
+function save(){
+  try{ localStorage.setItem(KEY, JSON.stringify(state)); }
+  catch(e){ toast("保存失败：浏览器存储不可用"); }
+}
+
+var toastTimer = null;
+function toast(msg){
+  var t = $("toast"); t.textContent = msg; t.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function(){ t.classList.remove("show"); }, 1800);
+}
+
+/* 应用内确认弹窗（替代浏览器 confirm，任何环境都能弹出） */
+var confirmCb = null;
+function askConfirm(msg, onOk, okText){
+  $("modalMsg").textContent = msg;
+  $("modalOk").textContent = okText || "删除";
+  $("confirmModal").classList.remove("hidden");
+  confirmCb = onOk;
+}
+function closeConfirm(){
+  $("confirmModal").classList.add("hidden");
+  confirmCb = null;
+}
+$("modalOk").addEventListener("click", function(){
+  var cb = confirmCb;
+  closeConfirm();
+  if(cb) cb();
+});
+$("modalCancel").addEventListener("click", closeConfirm);
+
+/* ---------- 导航 ---------- */
+var views = ["view-train","view-group","view-record","view-history","view-pr","view-stats"];
+function showView(name){
+  for(var i=0;i<views.length;i++){
+    $(views[i]).classList.toggle("hidden", views[i] !== name);
+  }
+  var back = $("backBtn");
+  if(name === "view-group"){ $("pageTitle").textContent = curGroup; back.classList.remove("hidden"); }
+  else if(name === "view-record"){ $("pageTitle").textContent = "记录训练"; back.classList.remove("hidden"); }
+  else{
+    $("pageTitle").textContent = name==="view-history" ? "历史记录" : (name==="view-pr" ? "个人纪录" : (name==="view-stats" ? "统计" : "健身记录"));
+    back.classList.add("hidden");
+  }
+}
+function showTab(name){
+  var tabs = document.querySelectorAll(".tab");
+  for(var i=0;i<tabs.length;i++){ tabs[i].classList.toggle("active", tabs[i].dataset.tab === name); }
+  if(name === "train"){ showView("view-train"); renderTrain(); }
+  else if(name === "history"){ showView("view-history"); renderHistory(); }
+  else if(name === "pr"){ showView("view-pr"); renderPR(); }
+  else{ showView("view-stats"); renderStats(); }
+}
+$("backBtn").addEventListener("click", function(){
+  if($("view-record").classList.contains("hidden") === false){ backFromRecord(false); }
+  else{ showView("view-train"); renderTrain(); }
+});
+document.querySelectorAll(".tab").forEach(function(b){
+  b.addEventListener("click", function(){ showTab(b.dataset.tab); });
+});
+
+/* ---------- 训练：肌肉群 ---------- */
+function renderTrain(){
+  var html = "";
+  GROUPS.forEach(function(g){
+    html += '<div class="gcard" data-g="'+esc(g)+'" style="background:linear-gradient(180deg,rgba(255,255,255,.30),rgba(255,255,255,.05) 42%,rgba(0,0,0,.20)),'+GROUP_COLORS[g]+'">'+
+      '<div class="gname">'+esc(g)+'</div></div>';
+  });
+  $("groupGrid").innerHTML = html;
+  document.querySelectorAll(".gcard").forEach(function(c){
+    c.addEventListener("click", function(){
+      curGroup = c.dataset.g;
+      document.body.style.setProperty("--gcolor", GROUP_COLORS[curGroup]);
+      showView("view-group");
+      renderGroup();
+    });
+  });
+}
+
+/* ---------- 训练：动作列表 ---------- */
+function exStats(name){
+  var best = 0, bestR = 0, last = null, total = 0;
+  state.records.forEach(function(r){
+    if(r.exercise !== name) return;
+    total++;
+    if(r.date > (last||0)) last = r.date;
+    r.sets.forEach(function(s){ if(s.w > best){ best = s.w; bestR = s.r; } });
+  });
+  return {best:best, bestR:bestR, last:last, total:total};
+}
+function fmtDate(ts){
+  var d = new Date(ts);
+  return (d.getMonth()+1)+"月"+d.getDate()+"日";
+}
+function renderGroup(){
+  var list = state.exercises[curGroup]||[];
+  // 按使用频率排序：练得越多越靠前，同频率保持原顺序
+  var freq = {};
+  state.records.forEach(function(r){ freq[r.exercise] = (freq[r.exercise]||0) + 1; });
+  var sorted = list.map(function(name, i){ return {name:name, i:i}; })
+    .sort(function(a,b){ return (freq[b.name]||0) - (freq[a.name]||0) || a.i - b.i; });
+  var html = "";
+  sorted.forEach(function(item){
+    var name = item.name;
+    var st = exStats(name);
+    var meta = st.total === 0 ? "暂无记录" : ("已练 "+st.total+" 次 · PR "+st.best+"kg×"+st.bestR+" · 上次 "+fmtDate(st.last));
+    html += '<div class="exrow">'+
+      '<div class="info"><div class="ename">'+esc(name)+'</div><div class="emeta">'+meta+'</div></div>'+
+      '<button class="del" data-del="'+esc(name)+'">✕</button>'+
+      '<button class="start" data-start="'+esc(name)+'">开始</button></div>';
+  });
+  $("exList").innerHTML = html || '<p class="empty">还没有动作，在下方添加吧</p>';
+  document.querySelectorAll("[data-start]").forEach(function(b){
+    b.addEventListener("click", function(){
+      curExercise = b.dataset.start;
+      openRecord();
+    });
+  });
+  document.querySelectorAll("[data-del]").forEach(function(b){
+    b.addEventListener("click", function(){
+      var name = b.dataset.del;
+      askConfirm("删除动作「"+name+"」？已有的历史记录会保留。", function(){
+        state.exercises[curGroup] = (state.exercises[curGroup]||[]).filter(function(x){return x!==name;});
+        save(); renderGroup(); renderTrain();
+      });
+    });
+  });
+}
+function addExercise(){
+  var name = $("newExName").value.trim();
+  if(!name){ toast("请输入动作名称"); return; }
+  if((state.exercises[curGroup]||[]).indexOf(name) >= 0){ toast("这个动作已存在"); return; }
+  if(!state.exercises[curGroup]) state.exercises[curGroup] = [];
+  state.exercises[curGroup].push(name);
+  $("newExName").value = "";
+  save(); renderGroup(); renderTrain();
+  toast("已添加「"+name+"」");
+}
+$("addExBtn").addEventListener("click", addExercise);
+$("newExName").addEventListener("keydown", function(e){ if(e.key === "Enter") addExercise(); });
+
+/* ---------- 训练：记录 ---------- */
+function openRecord(){
+  curSets = [];
+  $("recExName").textContent = curExercise;
+  var d = new Date();
+  var week = ["周日","周一","周二","周三","周四","周五","周六"][d.getDay()];
+  $("recDate").textContent = (d.getMonth()+1)+"月"+d.getDate()+"日 "+week+" "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");
+  $("wInput").value = ""; $("rInput").value = "";
+  $("wUnit").style.opacity = "0"; $("rUnit").style.opacity = "0";
+  renderSetList();
+  showView("view-record");
+  setTimeout(function(){ $("wInput").focus(); }, 100);
+}
+function renderSetList(){
+  var html = "";
+  curSets.forEach(function(s,i){
+    html += '<div class="setrow"><span class="idx">'+(i+1)+'</span>'+
+      '<span class="w">'+s.w+' kg</span><span class="x">×</span><span class="r">'+s.r+' 次</span>'+
+      '<span class="spacer"></span><button class="rm" data-i="'+i+'">✕</button></div>';
+  });
+  $("setList").innerHTML = html;
+  document.querySelectorAll(".rm").forEach(function(b){
+    b.addEventListener("click", function(){
+      askConfirm("删除这一组？", function(){
+        curSets.splice(parseInt(b.dataset.i,10),1);
+        renderSetList();
+      });
+    });
+  });
+}
+function readInputs(){
+  var w = parseFloat($("wInput").value), r = parseInt($("rInput").value,10);
+  if(isNaN(w) && isNaN(r)) return null;
+  if(isNaN(w) || w <= 0){ toast("请填写正确的重量"); return false; }
+  if(isNaN(r) || r <= 0){ toast("请填写正确的次数"); return false; }
+  return {w:w, r:r};
+}
+$("addSetBtn").addEventListener("click", function(){
+  var s = readInputs();
+  if(s === false) return;
+  if(s === null){ toast("先填重量和次数"); return; }
+  curSets.push(s);
+  $("wInput").value = ""; $("rInput").value = "";
+  $("wUnit").style.opacity = "0"; $("rUnit").style.opacity = "0";
+  renderSetList();
+  $("wInput").focus();
+});
+// 输入过滤：重量只允许数字和小数点，次数只允许数字
+$("wInput").addEventListener("input", function(){
+  var v = this.value.replace(/[^\d.]/g, "");
+  var dot = v.indexOf(".");
+  if(dot >= 0) v = v.slice(0, dot + 1) + v.slice(dot + 1).replace(/\./g, "");
+  this.value = v;
+  $("wUnit").style.opacity = v ? "1" : "0";
+});
+$("rInput").addEventListener("input", function(){
+  this.value = this.value.replace(/\D/g, "");
+  $("rUnit").style.opacity = this.value ? "1" : "0";
+});
+function backFromRecord(force){
+  if(!force && (curSets.length > 0 || $("wInput").value !== "" || $("rInput").value !== "")){
+    askConfirm("还有没保存的记录，确定放弃吗？", function(){
+      curSets = [];
+      showView("view-group");
+      renderGroup();
+    }, "放弃");
+    return;
+  }
+  curSets = [];
+  showView("view-group");
+  renderGroup();
+}
+$("cancelBtn").addEventListener("click", function(){ backFromRecord(false); });
+$("saveBtn").addEventListener("click", function(){
+  var s = readInputs();
+  if(s === false) return;
+  if(s) curSets.push(s);
+  if(curSets.length === 0){ toast("至少记录一组再保存"); return; }
+  state.records.unshift({ id: Date.now()+"_"+Math.floor(Math.random()*1e6),
+    group: curGroup, exercise: curExercise, date: Date.now(),
+    sets: curSets.map(function(x){return {w:x.w,r:x.r};}) });
+  save();
+  toast("已保存 "+curSets.length+" 组");
+  curSets = [];
+  showView("view-group");
+  renderGroup();
+});
+
+/* ---------- 历史 ---------- */
+function renderHistory(){
+  var chips = '<span class="chip'+(historyFilter==="全部"?" active":"")+'" data-f="全部">全部</span>';
+  GROUPS.forEach(function(g){
+    chips += '<span class="chip'+(historyFilter===g?" active":"")+'" data-f="'+esc(g)+'">'+esc(g)+'</span>';
+  });
+  $("filterChips").innerHTML = chips;
+  document.querySelectorAll(".chip").forEach(function(c){
+    c.addEventListener("click", function(){
+      historyFilter = c.dataset.f;
+      renderHistory();
+    });
+  });
+
+  var recs = state.records.slice().sort(function(a,b){ return b.date - a.date; });
+  if(historyFilter !== "全部") recs = recs.filter(function(r){ return r.group === historyFilter; });
+
+  // 同一个动作按时间先后编号（第1组、第2组……）
+  var orderById = {}, counter = {};
+  state.records.slice().sort(function(a,b){ return a.date - b.date; }).forEach(function(r){
+    if(!counter[r.exercise]) counter[r.exercise] = 0;
+    counter[r.exercise]++;
+    orderById[r.id] = counter[r.exercise];
+  });
+
+  if(recs.length === 0){
+    $("historyList").innerHTML = '<p class="empty">还没有训练记录，去练一组吧 💪</p>';
+    return;
+  }
+  var byDay = {};
+  recs.forEach(function(r){
+    var d = new Date(r.date);
+    var key = d.getFullYear()+"-"+(d.getMonth()+1)+"-"+d.getDate();
+    if(!byDay[key]) byDay[key] = [];
+    byDay[key].push(r);
+  });
+  var now = new Date();
+  var today0 = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  var html = "";
+  Object.keys(byDay).forEach(function(key, di){
+    var parts = key.split("-");
+    var d0 = new Date(parseInt(parts[0],10), parseInt(parts[1],10)-1, parseInt(parts[2],10));
+    var diff = Math.round((today0 - d0.getTime()) / 86400000);
+    var rel = diff === 0 ? "今天" : diff === 1 ? "昨天" : "";
+    var week = ["周日","周一","周二","周三","周四","周五","周六"][d0.getDay()];
+    html += '<div class="daycard" style="animation-delay:'+(di*50)+'ms">'+
+      '<div class="day-head"><span class="day-date">'+(d0.getMonth()+1)+"月"+d0.getDate()+"日</span>"+
+      (rel ? '<span class="day-rel">'+rel+'</span>' : '<span class="day-week">'+week+'</span>')+
+      '<span class="day-count">'+byDay[key].length+' 条记录</span></div>';
+    byDay[key].forEach(function(r){
+      var d = new Date(r.date);
+      var setsTxt = r.sets.map(function(s){ return s.w+"kg×"+s.r; }).join(" · ");
+      var c = GROUP_COLORS[r.group] || "#888";
+      html += '<div class="hisrow">'+
+        '<span class="grouptag" style="background:'+c+'22;color:'+c+'">'+esc(r.group)+'</span>'+
+        '<div class="hname">'+esc(r.exercise)+'</div>'+
+        '<span class="hno">第'+orderById[r.id]+'组</span>'+
+        '<div class="hsets">'+esc(setsTxt)+'</div>'+
+        '<span class="spacer"></span>'+
+        '<span class="htime">'+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0")+'</span>'+
+        '<button class="hm" data-id="'+r.id+'">✕</button></div>';
+    });
+    html += '</div>';
+  });
+  $("historyList").innerHTML = html;
+  document.querySelectorAll(".hm").forEach(function(b){
+    b.addEventListener("click", function(){
+      askConfirm("确定删除这条训练记录吗？删除后无法恢复。", function(){
+        state.records = state.records.filter(function(r){ return r.id !== b.dataset.id; });
+        save(); renderHistory(); renderTrain();
+      });
+    });
+  });
+}
+
+/* ---------- 统计 ---------- */
+function buildSelect(){
+  var html = "";
+  GROUPS.forEach(function(g){
+    html += '<optgroup label="'+esc(g)+'">';
+    (state.exercises[g]||[]).forEach(function(name){
+      html += '<option value="'+esc(name)+'"'+(statEx===name?" selected":"")+'>'+esc(name)+'</option>';
+    });
+    html += '</optgroup>';
+  });
+  $("exSelect").innerHTML = html;
+  if(!statEx && html.indexOf("<option") >= 0){
+    var firstOpt = $("exSelect").querySelector("option");
+    if(firstOpt) statEx = firstOpt.value;
+  }
+}
+function renderStats(){
+  buildSelect();
+  // 自动选中最近一次训练的动作
+  var latest = null;
+  state.records.forEach(function(r){
+    if(!latest || r.date > latest.date) latest = r;
+  });
+  if(latest && (state.exercises[latest.group]||[]).indexOf(latest.exercise) >= 0){
+    statEx = latest.exercise;
+  }
+  if(statEx) $("exSelect").value = statEx;
+  statEx = $("exSelect").value;
+  updateChart();
+}
+function renderPR(){
+  // PR 榜
+  var best = {};
+  state.records.forEach(function(r){
+    var bw = 0, br = 0;
+    r.sets.forEach(function(s){ if(s.w > bw){ bw = s.w; br = s.r; } });
+    if(!best[r.exercise] || bw > best[r.exercise].w){
+      best[r.exercise] = {w:bw, r:br, date:r.date, group:r.group};
+    }
+  });
+  var all = [];
+  GROUPS.forEach(function(g){
+    (state.exercises[g]||[]).forEach(function(name){
+      if(best[name]) all.push({name:name, w:best[name].w});
+    });
+  });
+  all.sort(function(a,b){ return b.w - a.w; });
+  var medal = {};
+  for(var mi = 0; mi < Math.min(3, all.length); mi++){ medal[all[mi].name] = ["🥇","🥈","🥉"][mi]; }
+  var html = "", idx = 0;
+  GROUPS.forEach(function(g){
+    (state.exercises[g]||[]).forEach(function(name){
+      if(best[name]){
+        var c = GROUP_COLORS[g];
+        html += '<div class="prrow" style="animation-delay:'+(idx*45)+'ms"><span class="grouptag" style="background:'+c+'22;color:'+c+'">'+esc(g)+'</span>'+
+          '<span class="pname">'+(medal[name] ? medal[name]+" " : "")+esc(name)+'</span>'+
+          '<span class="pdate">'+fmtDate(best[name].date)+'</span>'+
+          '<span class="pbest">'+best[name].w+' kg<span class="preps"> × '+best[name].r+'</span></span></div>';
+        idx++;
+      }
+    });
+  });
+  $("prList").innerHTML = html || '<p class="empty">还没有 PR，先去练起来 🏆</p>';
+}
+var rafList = [];
+function cancelAnims(){
+  for(var i=0;i<rafList.length;i++){ cancelAnimationFrame(rafList[i]); }
+  rafList = [];
+}
+function easeOutCubic(t){ return 1 - Math.pow(1 - t, 3); }
+function animateNum(el, target, decimals){
+  var start = null, dur = 650;
+  function fmt(v){ return decimals ? v.toFixed(1) : String(Math.round(v)); }
+  function step(ts){
+    if(start === null) start = ts;
+    var p = easeOutCubic(Math.min(1, (ts - start) / dur));
+    el.textContent = fmt(target * p);
+    if((ts - start) < dur) rafList.push(requestAnimationFrame(step));
+  }
+  rafList.push(requestAnimationFrame(step));
+}
+
+function updateChart(instant){
+  if(!statEx){ return; }
+  cancelAnims();
+  var isDark = document.body.classList.contains("dark");
+  var cGrid = isDark ? "#2a2f3a" : "#e9ecf1";
+  var cLabel = isDark ? "#8b93a1" : "#8b919c";
+  var cText = isDark ? "#eef1f5" : "#1f2329";
+  var cCard = isDark ? "#171a20" : "#ffffff";
+  // 按天合并：同一天多次训练只取当天最大重量
+  var dayMap = {};
+  state.records.forEach(function(r){
+    if(r.exercise !== statEx) return;
+    var maxW = 0, maxR = 0;
+    r.sets.forEach(function(s){ if(s.w > maxW){ maxW = s.w; maxR = s.r; } });
+    var d = new Date(r.date);
+    var key = d.getFullYear()+"-"+(d.getMonth()+1)+"-"+d.getDate();
+    if(!dayMap[key]){ dayMap[key] = {date:r.date, maxW:maxW, maxR:maxR}; }
+    else if(maxW > dayMap[key].maxW){ dayMap[key].maxW = maxW; dayMap[key].maxR = maxR; }
+  });
+  var sessions = Object.keys(dayMap).map(function(k){ return dayMap[k]; });
+  sessions.sort(function(a,b){ return a.date - b.date; });
+
+  var total = sessions.length, best = 0, bestR = 0;
+  sessions.forEach(function(s){ if(s.maxW>best){ best=s.maxW; bestR=s.maxR; } });
+  animateNum($("stBest"), best, 1);
+  animateNum($("stReps"), bestR, 0);
+
+  var canvas = $("chart");
+  var dpr = window.devicePixelRatio || 1;
+  var cw = canvas.clientWidth, chh = canvas.clientHeight;
+  canvas.width = cw * dpr; canvas.height = chh * dpr;
+  var ctx = canvas.getContext("2d");
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.clearRect(0,0,cw,chh);
+  if(total === 0){
+    ctx.fillStyle = cLabel; ctx.font = "13px sans-serif"; ctx.textAlign = "center";
+    ctx.fillText("暂无数据：练一次「"+statEx+"」就有了", cw/2, chh/2);
+    return;
+  }
+  var padL = 34, padR = 14, padT = 24, padB = 26;
+  var iw = cw - padL - padR, ih = chh - padT - padB;
+  var vals = sessions.map(function(s){ return s.maxW; });
+  var maxV = Math.max.apply(null, vals), minV = Math.min.apply(null, vals);
+  if(total === 1){ minV = maxV - 5; maxV = maxV + 5; }
+  else{ minV = Math.max(0, minV - 2.5); maxV = maxV + 2.5; }
+  if(minV === maxV) maxV += 2.5;
+  function X(i){ return total === 1 ? padL + iw/2 : padL + iw * i/(total-1); }
+  function Y(v){ return padT + ih * (1 - (v - minV)/(maxV - minV)); }
+
+  // 平滑曲线采样（过中点二次贝塞尔）
+  var pts = sessions.map(function(s, i){ return {x: X(i), y: Y(s.maxW)}; });
+  var segs = [], totalLen = 0;
+  if(total > 1){
+    var prev;
+    for(var si = 0; si < pts.length - 1; si++){
+      var A = si === 0 ? pts[0] : {x:(pts[si-1].x+pts[si].x)/2, y:(pts[si-1].y+pts[si].y)/2};
+      var B = pts[si];
+      var C = {x:(pts[si].x+pts[si+1].x)/2, y:(pts[si].y+pts[si+1].y)/2};
+      prev = A;
+      for(var t2 = 1; t2 <= 16; t2++){
+        var t = t2/16;
+        var x = (1-t)*(1-t)*A.x + 2*(1-t)*t*B.x + t*t*C.x;
+        var y = (1-t)*(1-t)*A.y + 2*(1-t)*t*B.y + t*t*C.y;
+        totalLen += Math.sqrt((x-prev.x)*(x-prev.x) + (y-prev.y)*(y-prev.y));
+        prev = {x:x, y:y};
+        segs.push({x:x, y:y, cum:totalLen});
+      }
+    }
+    var lastM = {x:(pts[pts.length-2].x+pts[pts.length-1].x)/2, y:(pts[pts.length-2].y+pts[pts.length-1].y)/2};
+    var lastP = pts[pts.length-1];
+    prev = lastM;
+    for(var t3 = 1; t3 <= 8; t3++){
+      var tt = t3/8;
+      var lx = lastM.x + (lastP.x-lastM.x)*tt, ly = lastM.y + (lastP.y-lastM.y)*tt;
+      totalLen += Math.sqrt((lx-prev.x)*(lx-prev.x) + (ly-prev.y)*(ly-prev.y));
+      prev = {x:lx, y:ly};
+      segs.push({x:lx, y:ly, cum:totalLen});
+    }
+  }
+  function getPartial(p){
+    var res = [pts[0]];
+    if(total <= 1) return res;
+    var target = p * totalLen;
+    for(var i3 = 0; i3 < segs.length; i3++){
+      if(segs[i3].cum <= target){
+        res.push({x:segs[i3].x, y:segs[i3].y});
+      }else{
+        var pc = i3 === 0 ? {x:pts[0].x, y:pts[0].y, cum:0} : segs[i3-1];
+        var ratio = segs[i3].cum > pc.cum ? (target - pc.cum) / (segs[i3].cum - pc.cum) : 0;
+        res.push({x: pc.x + (segs[i3].x-pc.x)*ratio, y: pc.y + (segs[i3].y-pc.y)*ratio});
+        break;
+      }
+    }
+    return res;
+  }
+  function draw(p, rawP){
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.clearRect(0,0,cw,chh);
+    var gridAlpha = Math.min(1, rawP * 1.6);
+    ctx.globalAlpha = gridAlpha;
+    ctx.strokeStyle = cGrid; ctx.fillStyle = cLabel; ctx.font = "10px sans-serif";
+    ctx.lineWidth = 1;
+    for(var g = 0; g <= 3; g++){
+      var gy = padT + ih * g/3;
+      ctx.beginPath(); ctx.moveTo(padL, gy); ctx.lineTo(cw - padR, gy); ctx.stroke();
+      var gv = maxV - (maxV - minV) * g/3;
+      ctx.textAlign = "right"; ctx.fillText(Math.round(gv*10)/10 + "", padL - 6, gy + 3);
+    }
+    ctx.textAlign = "center";
+    var step = Math.max(1, Math.ceil(total/5));
+    for(var i2 = 0; i2 < total; i2 += step){
+      var d = new Date(sessions[i2].date);
+      ctx.fillText((d.getMonth()+1)+"/"+d.getDate(), X(i2), chh - 8);
+    }
+    ctx.globalAlpha = 1;
+    if(p <= 0) return;
+    var partial = getPartial(p);
+    if(partial.length > 1){
+      var grad = ctx.createLinearGradient(0, padT, 0, chh - padB);
+      grad.addColorStop(0, "rgba(255,107,53,.20)");
+      grad.addColorStop(1, "rgba(255,107,53,0)");
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.moveTo(partial[0].x, chh - padB);
+      for(var k3=0;k3<partial.length;k3++){ ctx.lineTo(partial[k3].x, partial[k3].y); }
+      ctx.lineTo(partial[partial.length-1].x, chh - padB);
+      ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = "#ff6b35"; ctx.lineWidth = 2.5; ctx.lineJoin = "round"; ctx.lineCap = "round";
+      ctx.shadowColor = "rgba(255,107,53,.45)"; ctx.shadowBlur = 8;
+      ctx.beginPath();
+      ctx.moveTo(partial[0].x, partial[0].y);
+      for(var k4=1;k4<partial.length;k4++){ ctx.lineTo(partial[k4].x, partial[k4].y); }
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+    }
+    sessions.forEach(function(s, i){
+      var appear = total === 1 ? 0.35 : (i/(total-1)) * 0.75;
+      if(p >= appear){
+        var k = Math.min(1, (p - appear) / 0.22);
+        var px = X(i), py = Y(s.maxW);
+        ctx.globalAlpha = k;
+        ctx.beginPath(); ctx.arc(px, py, 6.5*k, 0, Math.PI*2);
+        ctx.fillStyle = cCard; ctx.fill();
+        ctx.beginPath(); ctx.arc(px, py, 3.5*k, 0, Math.PI*2);
+        ctx.fillStyle = "#ff6b35"; ctx.fill();
+        ctx.fillStyle = cText; ctx.font = "bold 10px sans-serif"; ctx.textAlign = "center";
+        ctx.lineWidth = 3; ctx.strokeStyle = cCard; ctx.lineJoin = "round";
+        ctx.strokeText(s.maxW+"kg", px, py - 9 - (1-k)*3);
+        ctx.fillText(s.maxW+"kg", px, py - 9 - (1-k)*3);
+        ctx.globalAlpha = 1;
+      }
+    });
+  }
+
+  if(instant){
+    draw(1, 1);
+  }else{
+    var start = null, dur = 900;
+    function frame(ts){
+      if(start === null) start = ts;
+      var raw = Math.min(1, (ts - start) / dur);
+      var p = easeOutCubic(raw);
+      draw(p, raw);
+      if(raw < 1) rafList.push(requestAnimationFrame(frame));
+    }
+    rafList.push(requestAnimationFrame(frame));
+  }
+}
+$("exSelect").addEventListener("change", function(){
+  statEx = $("exSelect").value;
+  updateChart();
+});
+window.addEventListener("resize", function(){
+  if(!$("view-stats").classList.contains("hidden")) updateChart(true);
+});
+
+/* ---------- 数据管理 ---------- */
+$("exportBtn").addEventListener("click", function(){
+  var blob = new Blob([JSON.stringify(state, null, 2)], {type:"application/json"});
+  var a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "健身记录备份_" + new Date().toISOString().slice(0,10) + ".json";
+  document.body.appendChild(a); a.click(); a.remove();
+  toast("已导出备份文件");
+});
+$("importBtn").addEventListener("click", function(){ $("importFile").click(); });
+$("importFile").addEventListener("change", function(){
+  var f = this.files[0];
+  if(!f) return;
+  var reader = new FileReader();
+  reader.onload = function(){
+    try{
+      var d = JSON.parse(reader.result);
+      if(!d || !d.exercises || !Array.isArray(d.records)) throw new Error("bad");
+      GROUPS.forEach(function(g){ if(!d.exercises[g]) d.exercises[g] = []; });
+      state = d; save();
+      renderTrain(); renderHistory(); statEx = null; renderStats();
+      toast("导入成功");
+    }catch(e){ toast("文件格式不对，导入失败"); }
+  };
+  reader.readAsText(f);
+  this.value = "";
+});
+$("clearBtn").addEventListener("click", function(){
+  askConfirm("确定清空全部数据？此操作不可恢复！", function(){
+    askConfirm("再确认一次：真的要清空吗？建议先用「导出数据」备份。", function(){
+      state = { exercises: JSON.parse(JSON.stringify(DEFAULT_EX)), records: [] };
+      save(); renderTrain(); renderHistory(); statEx = null; renderStats();
+      toast("已清空");
+    }, "清空");
+  }, "继续");
+});
+
+/* ---------- 深浅色主题 ---------- */
+function applyTheme(dark){
+  if(dark){ document.body.classList.add("dark"); }
+  else{ document.body.classList.remove("dark"); }
+  $("themeBtn").textContent = dark ? "☀️" : "🌙";
+  try{ localStorage.setItem("gymlog_theme", dark ? "dark" : "light"); }catch(e){}
+}
+$("themeBtn").addEventListener("click", function(){
+  applyTheme(!document.body.classList.contains("dark"));
+  if(!$("view-stats").classList.contains("hidden")) updateChart(true);
+});
+
+/* ---------- PWA：离线安装（仅在 https 或 localhost 下注册，本地文件打开时自动跳过） ---------- */
+if(typeof navigator !== "undefined" && "serviceWorker" in navigator &&
+   (location.protocol === "https:" || location.hostname === "localhost")){
+  navigator.serviceWorker.register("sw.js").catch(function(){});
+}
+
+/* ---------- 启动 ---------- */
+load();
+var savedTheme = null;
+try{ savedTheme = localStorage.getItem("gymlog_theme"); }catch(e){}
+applyTheme(savedTheme === "dark");
+renderTrain();
+renderHistory();
+buildSelect();
+if(statEx) updateChart();
+})();
+</script>
+</body>
+</html>
